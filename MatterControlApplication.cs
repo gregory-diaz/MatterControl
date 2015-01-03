@@ -70,6 +70,17 @@ namespace MatterHackers.MatterControl
             StaticData.Instance = new MatterHackers.Agg.FileSystemStaticData();
         }
 
+        public override void OnKeyUp(KeyEventArgs keyEvent)
+        {
+            if(keyEvent.KeyCode == Keys.Home && keyEvent.Shift)
+            {
+                PrinterConnectionAndCommunication.Instance.HomeAxis(PrinterConnectionAndCommunication.Axis.XYZ);
+            }
+
+            base.OnKeyUp(keyEvent);
+        }
+
+        
         public MatterControlApplication(double width, double height)
             : base(width, height)
         {
