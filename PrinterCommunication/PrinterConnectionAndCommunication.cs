@@ -44,6 +44,7 @@ using MatterHackers.MatterControl.ConfigurationPage.PrintLeveling;
 using MatterHackers.MatterControl.DataStorage;
 using MatterHackers.MatterControl.PrintQueue;
 using MatterHackers.MatterControl.SlicerConfiguration;
+using MatterHackers.MatterControl.CustomWidgets;
 using MatterHackers.SerialPortCommunication;
 using MatterHackers.SerialPortCommunication.FrostedSerial;
 using MatterHackers.VectorMath;
@@ -900,8 +901,8 @@ namespace MatterHackers.MatterControl.PrinterCommunication
                     {
                         CheckBox hideGCodeWarningCheckBox = new CheckBox(doNotShowAgainMessage);
                         hideGCodeWarningCheckBox.TextColor = ActiveTheme.Instance.PrimaryTextColor;
-						hideGCodeWarningCheckBox.Margin = new BorderDouble(top: 6, left: 6);
-						hideGCodeWarningCheckBox.HAnchor = Agg.UI.HAnchor.ParentLeft;
+                        hideGCodeWarningCheckBox.Margin = new BorderDouble(top: 6, left: 6);
+                        hideGCodeWarningCheckBox.HAnchor = Agg.UI.HAnchor.ParentLeft;
                         hideGCodeWarningCheckBox.Click += (sender, e) =>
                         {
                             if (hideGCodeWarningCheckBox.Checked)
@@ -913,13 +914,15 @@ namespace MatterHackers.MatterControl.PrinterCommunication
                                 ApplicationSettings.Instance.set("HideGCodeWarning", null);
                             }
                         };
-                        StyledMessageBox.ShowMessageBox(onConfirmPrint, gcodeWarningMessage, "Warning - GCode file".Localize(), new GuiWidget[] { hideGCodeWarningCheckBox }, StyledMessageBox.MessageType.YES_NO);
+                        StyledMessageBox.ShowMessageBox(onConfirmPrint, gcodeWarningMessage, "Warning - GCode file".Localize(), new GuiWidget[] { new VerticalSpacer(), hideGCodeWarningCheckBox }, StyledMessageBox.MessageType.YES_NO);
                     }
-
-                    PrinterConnectionAndCommunication.Instance.CommunicationState = PrinterConnectionAndCommunication.CommunicationStates.PreparingToPrint;
-                    PrintItemWrapper partToPrint = PrinterConnectionAndCommunication.Instance.ActivePrintItem;
-                    SlicingQueue.Instance.QueuePartForSlicing(partToPrint);
-                    partToPrint.SlicingDone.RegisterEvent(partToPrint_SliceDone, ref unregisterEvents);
+                    else
+                    {
+                        PrinterConnectionAndCommunication.Instance.CommunicationState = PrinterConnectionAndCommunication.CommunicationStates.PreparingToPrint;
+                        PrintItemWrapper partToPrint = PrinterConnectionAndCommunication.Instance.ActivePrintItem;
+                        SlicingQueue.Instance.QueuePartForSlicing(partToPrint);
+                        partToPrint.SlicingDone.RegisterEvent(partToPrint_SliceDone, ref unregisterEvents);
+                    }
                 }
                 else
                 {
@@ -931,7 +934,7 @@ namespace MatterHackers.MatterControl.PrinterCommunication
 
         void onConfirmPrint(bool messageBoxResponse)
         {
-            if (!messageBoxResponse)
+            if (messageBoxResponse)
             {
                 PrinterConnectionAndCommunication.Instance.CommunicationState = PrinterConnectionAndCommunication.CommunicationStates.PreparingToPrint;
                 PrintItemWrapper partToPrint = PrinterConnectionAndCommunication.Instance.ActivePrintItem;
@@ -1919,11 +1922,14 @@ namespace MatterHackers.MatterControl.PrinterCommunication
                         serialPort.Write(lineToWrite);
                         //Debug.Write("w: " + lineToWrite);
                     }
-                    catch (IOException)
+                    catch (IOException ex)
                     {
-                        OnConnectionFailed(null);
+                        Trace.WriteLine("Error writing to printer: " + ex.Message);
+
+                        // Handle hardware disconnects by relaying the failure reason and shutting down open resources
+                        AbortConnectionAttempt("Connection Lost - " + ex.Message);
                     }
-                    catch (TimeoutException)
+                    catch (TimeoutException ex)
                     {
                     }
                 }
@@ -1974,6 +1980,7 @@ namespace MatterHackers.MatterControl.PrinterCommunication
         /// <param name="shutdownReadLoop">Shutdown/join the readFromPrinterThread</param>
         public void AbortConnectionAttempt(string abortReason, bool shutdownReadLoop = true)
         {
+            // Set .Disconnecting to allow the readloop to exit gracefully before a forced thread join (and extended timeout)
             CommunicationState = CommunicationStates.Disconnecting;
 
             // Shudown the connectionAttempt thread

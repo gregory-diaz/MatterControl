@@ -79,8 +79,9 @@ namespace MatterHackers.MatterControl
             this.commandLineArgs = Environment.GetCommandLineArgs();
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 
-            foreach(string command in commandLineArgs)
+            for(int currentCommandIndex = 0; currentCommandIndex < commandLineArgs.Length; currentCommandIndex++)
             {
+                string command = commandLineArgs[currentCommandIndex];
                 string commandUpper = command.ToUpper();
                 switch (commandUpper)
                 {
@@ -101,6 +102,28 @@ namespace MatterHackers.MatterControl
                         ShowMemoryUsed = true;
                         DoCGCollectEveryDraw = true;
                         break;
+
+                    case "CREATE_AND_SELECT_PRINTER":
+                        if (currentCommandIndex + 1 < commandLineArgs.Length)
+                        {
+                            currentCommandIndex++;
+                            string argument = commandLineArgs[currentCommandIndex];
+                            string[] printerData = argument.Split(',');
+                            if (printerData.Length == 2)
+                            {
+                                Printer ActivePrinter = new Printer();
+
+                                ActivePrinter.Name = "Auto: {0} {1}".FormatWith(printerData[0], printerData[1]);
+                                ActivePrinter.Make = printerData[0];
+                                ActivePrinter.Model = printerData[1];
+
+                                PrinterSetupStatus test = new PrinterSetupStatus(ActivePrinter);
+                                test.LoadSetupSettings(ActivePrinter.Make, ActivePrinter.Model);
+                                ActivePrinterProfile.Instance.ActivePrinter = ActivePrinter;
+                            }
+                        }
+                        break;
+
                 }
 
                 if (MeshFileIo.ValidFileExtensions().Contains(Path.GetExtension(command).ToUpper()))
@@ -280,6 +303,8 @@ namespace MatterHackers.MatterControl
         Stopwatch totalDrawTime = new Stopwatch();
         int drawCount = 0;
 
+        AverageMillisecondTimer millisecondTimer = new AverageMillisecondTimer();
+
         Gaming.Game.DataViewGraph msGraph = new Gaming.Game.DataViewGraph(new Vector2(20, 500), 50, 50, 0, 200);
         public override void OnDraw(Graphics2D graphics2D)
         {
@@ -288,10 +313,12 @@ namespace MatterHackers.MatterControl
             base.OnDraw(graphics2D);
             totalDrawTime.Stop();
 
+            millisecondTimer.Update((int)totalDrawTime.ElapsedMilliseconds);
+
             if (ShowMemoryUsed)
             {
                 long memory = GC.GetTotalMemory(false);
-                this.Title = "Allocated = {0:n0} : {1:000}ms, d{2} Size = {3}x{4}, onIdle = {5:00}:{6:00}, drawCount = {7}".FormatWith(memory, totalDrawTime.ElapsedMilliseconds, drawCount++, this.Width, this.Height, UiThread.CountExpired, UiThread.Count, GuiWidget.DrawCount);
+                this.Title = "Allocated = {0:n0} : {1:000}ms, d{2} Size = {3}x{4}, onIdle = {5:00}:{6:00}, drawCount = {7}".FormatWith(memory, millisecondTimer.GetAverage(), drawCount++, this.Width, this.Height, UiThread.CountExpired, UiThread.Count, GuiWidget.DrawCount);
                 if (DoCGCollectEveryDraw)
                 {
                     GC.Collect();
