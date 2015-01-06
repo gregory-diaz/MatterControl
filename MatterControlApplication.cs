@@ -44,6 +44,7 @@ using MatterHackers.MatterControl.PrinterCommunication;
 using MatterHackers.MatterControl.PrintQueue;
 using MatterHackers.MatterControl.SettingsManagement;
 using MatterHackers.MatterControl.SlicerConfiguration;
+using MatterHackers.MatterControl.PrinterControls;
 using MatterHackers.VectorMath;
 using MatterHackers.PolygonMesh.Processors;
 using MatterHackers.MatterControl.CreatorPlugins;
@@ -75,6 +76,10 @@ namespace MatterHackers.MatterControl
             if(keyEvent.KeyCode == Keys.Home && keyEvent.Shift)
             {
                 PrinterConnectionAndCommunication.Instance.HomeAxis(PrinterConnectionAndCommunication.Axis.XYZ);
+            }
+            else if (keyEvent.KeyCode == Keys.Up && keyEvent.Control)
+            {           
+                PrinterConnectionAndCommunication.Instance.MoveRelative(this.moveAxis, this.MoveAmount, movementFeedRate);
             }
 
             base.OnKeyUp(keyEvent);
