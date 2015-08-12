@@ -75,6 +75,7 @@ namespace MatterHackers.MatterControl.ConfigurationPage.PrintLeveling
 		{
 			AlwaysOnTopOfMain = true;
 			this.totalSteps = totalSteps;
+
 		}
 
 		public static Vector2 GetPrintLevelPositionToSample(int index)

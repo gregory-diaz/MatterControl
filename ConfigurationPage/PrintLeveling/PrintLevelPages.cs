@@ -225,6 +225,7 @@ namespace MatterHackers.MatterControl.ConfigurationPage.PrintLeveling
 		private ProbePosition probePosition;
 		private double moveAmount;
 		private bool allowLessThan0;
+		public CheckBox disableHotKeys;
 
 		protected JogControls.MoveButton zPlusControl;
 		protected JogControls.MoveButton zMinusControl;
@@ -239,7 +240,7 @@ namespace MatterHackers.MatterControl.ConfigurationPage.PrintLeveling
 
 			GuiWidget spacer = new GuiWidget(15, 15);
 			topToBottomControls.AddChild(spacer);
-
+			this.DebugShowBounds = true;
 			FlowLayoutWidget zButtonsAndInfo = new FlowLayoutWidget();
 			zButtonsAndInfo.HAnchor |= Agg.UI.HAnchor.ParentCenter;
 			FlowLayoutWidget zButtons = CreateZButtons();
@@ -249,11 +250,20 @@ namespace MatterHackers.MatterControl.ConfigurationPage.PrintLeveling
 
 			FlowLayoutWidget textFields = new FlowLayoutWidget(FlowDirection.TopToBottom);
 
+			disableHotKeys= new CheckBox ("Enable stuff");
+			disableHotKeys.TextColor = ActiveTheme.Instance.PrimaryTextColor;
+			disableHotKeys.Margin = new BorderDouble (5);
+			disableHotKeys.Checked = true;
+
 			zButtonsAndInfo.AddChild(textFields);
 
 			topToBottomControls.AddChild(zButtonsAndInfo);
+			topToBottomControls.AddChild(disableHotKeys);
 
 			AddTextField(setZHeightCoarseInstruction2, 10);
+
+
+
 		}
 
 		private event EventHandler unregisterEvents;
@@ -290,6 +300,39 @@ namespace MatterHackers.MatterControl.ConfigurationPage.PrintLeveling
 			zPlusControl.Click += new EventHandler(zPlusControl_Click);
 			zMinusControl.Click += new EventHandler(zMinusControl_Click);
 			return zButtons;
+		}
+
+		public void zButtonMoves(WizardControl control)
+		{
+			var page = control;
+			 
+			control.KeyDown += (sender, e) => 
+			{
+				if (e.KeyCode == Keys.PageUp)
+				{
+					PrinterConnectionAndCommunication.Instance.MoveRelative(PrinterConnectionAndCommunication.Axis.Z, this.moveAmount, InstructionsPage.ManualControlsFeedRate().z);
+					PrinterConnectionAndCommunication.Instance.ReadPosition();
+
+				}
+				else if(e.KeyCode == Keys.PageDown) 
+				{
+
+					if (!allowLessThan0
+						&& PrinterConnectionAndCommunication.Instance.LastReportedPosition.z - this.moveAmount < 0)
+					{
+						UiThread.RunOnIdle(() =>
+							{
+								StyledMessageBox.ShowMessageBox(null, zIsTooLowMessage, zTooLowTitle, StyledMessageBox.MessageType.OK);
+							});
+						// don't move the bed lower it will not work when we print.
+						return;
+					}
+					PrinterConnectionAndCommunication.Instance.MoveRelative(PrinterConnectionAndCommunication.Axis.Z, -moveAmount, InstructionsPage.ManualControlsFeedRate().z);
+					PrinterConnectionAndCommunication.Instance.ReadPosition();
+
+				}
+			};
+				
 		}
 
 		private static string zIsTooLowMessage = "You cannot move any lower. This position on your bed is too low for the extruder to reach. You need to raise your bed, or adjust your limits to allow the extruder to go lower.".Localize();
@@ -337,6 +380,10 @@ namespace MatterHackers.MatterControl.ConfigurationPage.PrintLeveling
 		{
 			this.container = container;
 			this.probeStartPosition = probeStartPosition;
+	
+		    zButtonMoves(container);
+
+		
 		}
 
 		public override void PageIsBecomingActive()

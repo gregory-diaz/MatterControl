@@ -113,8 +113,19 @@ namespace MatterHackers.MatterControl
 				topToBottom.AddChild(buttonBar);
 			}
 
-			bottomToTopLayout.AnchorAll();
+			this.KeyDown += (sender, e) => 
+			{
+				if (e.KeyCode == Keys.PageUp)
+				{
+					nextButton.Enabled = true;
+				}
+				else if (e.KeyCode == Keys.PageDown)
+				{
+					nextButton.Enabled = true;
+				}
+			};
 
+			bottomToTopLayout.AnchorAll();
 			AddChild(topToBottom);
 		}
 

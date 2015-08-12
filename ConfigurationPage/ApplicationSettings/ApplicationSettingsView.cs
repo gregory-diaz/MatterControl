@@ -42,7 +42,8 @@ namespace MatterHackers.MatterControl.ConfigurationPage
 	public class ApplicationSettingsWidget : SettingsViewBase
 	{
 		private Button languageRestartButton;
-		private Button configureUpdateFeedButton;
+		private Button 
+		configureUpdateFeedButton;
         public StyledDropDownList releaseOptionsDropList;
         private string cannotRestartWhilePrintIsActiveMessage; 
         private string cannotRestartWhileActive;
